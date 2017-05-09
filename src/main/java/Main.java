@@ -2,8 +2,6 @@ import com.scitools.understand.Database;
 import com.scitools.understand.Entity;
 import com.scitools.understand.Reference;
 import com.scitools.understand.Understand;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
 /**
  * Created by OMEN 15 on 5/7/2017.
@@ -18,10 +16,10 @@ public class Main {
     for (String language : db.language()) {
       System.out.println(language);
     }
-    Entity[] packages = db.ents("Package ~unused");
-    //System.out.println(packages.length);
+    Entity[] packages = db.ents("Java Package ~unused ~unresolved ~unknown");
+    System.out.println(packages.length);
     for (final Entity pkg : packages) {
-      System.out.println("Package"+pkg.kind());
+      System.out.println("Package" + pkg.kind());
       parseClasses(pkg);
     }
     try {
@@ -43,24 +41,48 @@ public class Main {
   }
 
   private static void parseClasses(final Entity pkg) {
-    for (final Reference clazz : pkg.refs("~unused", "Class ~", true)) {
-      System.out.println("class"+clazz.ent().kind());
-      //System.out.println(clazz.ent().longname(true));
-      Entity file = clazz.file();
-     // System.out.println(file.longname(true));
-      parseMethods(clazz.ent());
+    final String pkgName = pkg.longname(true);
+    for (final Reference clazz : pkg.refs("~unused", "Class ", true)) {
+      System.out.println("class" + clazz.ent().kind());
+      final String className = clazz.ent().longname(true);
+      final Entity file = clazz.file();
+      final String fileName = file.longname(true);
+      processInnerClasses(pkgName, clazz);
+      processMethods(className, pkgName, file, clazz.ent().refs("Define", "Method", true));
     }
   }
 
-  private static void parseMethods(final Entity clazz) {
-    for (final Reference method : clazz.refs("Define", "Method", true)) {
-      System.out.println("method"+method.ent().kind());
-      Reference[] parameters = method.ent().refs("","Parameter ~Catch ~Type",true);
-      //System.out.println(method.ent().longname(true));
-      Entity file = method.file();
-      //System.out.println(file.longname(true));
-      //System.out.println(method.ent().toString());
-      //System.out.println(method.ent().type());
+  private static void processInnerClasses(final String pkgName, final Reference clazz) {
+    final Reference[] innerClasses = clazz.ent()
+        .refs("Define ~unresolved ~unknown", "Class ~TypeVariable", true);
+    for (Reference innerClass :
+        innerClasses) {
+      final String className = innerClass.ent().longname(true);
+      final Entity file = clazz.file();
+      processMethods(className, pkgName, file, innerClass.ent().refs("Define", "Method", true));
     }
+  }
+
+  private static void processMethods(final String className, final String pkgName,
+      final Entity file,
+      final Reference[] methods) {
+    final String fileName = file.longname(true);
+    for (final Reference method : methods) {
+      final Reference[] endRefs = method.ent().refs("End", "", true);
+      if (endRefs == null || endRefs.length == 0) {
+        continue;
+      }
+
+    }
+  }
+
+  private static String getMethodSignature(final Reference method) {
+    final Reference[] params = method.ent().refs("", "Parameters ~Catch ~Type", true);
+    final String methodName = method.ent().simplename();
+    final StringBuilder args = new StringBuilder();
+    for (int i = 0; i < params.length; i++) {
+
+    }
+    return null;
   }
 }
